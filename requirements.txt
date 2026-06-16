@@ -4,3 +4,4 @@ openpyxl
 python-pptx
 rapidfuzz
 sentence-transformers
+PySide6
