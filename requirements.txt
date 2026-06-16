@@ -5,3 +5,4 @@ python-pptx
 rapidfuzz
 sentence-transformers
 PySide6
+pyinstaller
