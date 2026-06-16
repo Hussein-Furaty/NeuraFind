@@ -2,3 +2,4 @@ PyMuPDF
 python-docx
 openpyxl
 python-pptx
+rapidfuzz
