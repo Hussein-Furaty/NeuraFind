@@ -1,0 +1,67 @@
+"""Background QThread workers for non-blocking UI."""
+
+from PySide6.QtCore import QThread, Signal
+
+class IndexWorker(QThread):
+    finished = Signal(int)
+    error = Signal(str)
+
+    def __init__(self, service, folder_path: str):
+        super().__init__()
+        self._service = service
+        self._folder_path = folder_path
+
+    def run(self):
+        try:
+            count = self._service.index_folder(self._folder_path)
+            self.finished.emit(count)
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+class SearchWorker(QThread):
+    finished = Signal(list)
+    error = Signal(str)
+
+    def __init__(self, service, query: str, top_k: int = 10, location_filter: str = None):
+        super().__init__()
+        self._service = service
+        self._query = query
+        self._top_k = top_k
+        self._location_filter = location_filter
+
+    def run(self):
+        try:
+            # We fetch more results initially if we need to filter them
+            fetch_limit = self._top_k * 5 if self._location_filter else self._top_k
+            results = self._service.search(self._query, top_k=fetch_limit)
+            
+            if self._location_filter:
+                import os
+                filter_path = os.path.normpath(self._location_filter).lower()
+                filtered = []
+                for r in results:
+                    p = os.path.normpath(str(r.get("path", ""))).lower()
+                    if p.startswith(filter_path):
+                        filtered.append(r)
+                results = filtered[:self._top_k]
+                
+            self.finished.emit(results)
+        except Exception as exc:
+            self.error.emit(str(exc))
+
+class ModelDownloadWorker(QThread):
+    finished = Signal(str)
+    error = Signal(str)
+    progress = Signal(int) # Currently unused, but good practice
+
+    def __init__(self, model_name: str):
+        super().__init__()
+        self._model_name = model_name
+
+    def run(self):
+        try:
+            from src.neurafind.services.model_service import download_model
+            download_model(self._model_name)
+            self.finished.emit(self._model_name)
+        except Exception as exc:
+            self.error.emit(str(exc))

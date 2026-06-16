@@ -1,401 +1,391 @@
-"""NeuraFind main window — PySide6 desktop interface."""
+"""NeuraFind Main Window — IDE-style shell assembling all components."""
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QAction, QIcon, QPixmap
 from PySide6.QtWidgets import (
-    QFileDialog,
-    QHBoxLayout,
-    QHeaderView,
-    QLabel,
-    QLineEdit,
-    QMainWindow,
-    QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
-    QVBoxLayout,
-    QWidget,
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
+    QLabel, QStatusBar, QApplication, QProgressBar, QFileDialog,
+    QMenu,
 )
 
+from src.neurafind.ui.core.theme import get_theme, build_stylesheet
+from src.neurafind.ui.core.state import state
+from src.neurafind.ui.core.workers import IndexWorker, SearchWorker
 
-# ---------------------------------------------------------------------------
-# Background workers
-# ---------------------------------------------------------------------------
+from src.neurafind.ui.components.explorer import FileExplorer
+from src.neurafind.ui.components.workspace import Workspace
+from src.neurafind.ui.components.preview_panel import PreviewPanel
+from src.neurafind.ui.components.quick_search import QuickSearchDialog
+from src.neurafind.ui.components.notifications import ToastNotification
 
-class _IndexWorker(QThread):
-    """Runs folder indexing on a background thread."""
-
-    finished = Signal(int)
-    error = Signal(str)
-
-    def __init__(self, service, folder_path: str):
-        super().__init__()
-        self._service = service
-        self._folder_path = folder_path
-
-    def run(self):
-        try:
-            count = self._service.index_folder(self._folder_path)
-            self.finished.emit(count)
-        except Exception as exc:
-            self.error.emit(str(exc))
+from src.neurafind.ui.dialogs.settings import SettingsDialog
+from src.neurafind.ui.dialogs.about import AboutDialog
+from src.neurafind.ui.dialogs.indexing import IndexingManagerDialog
 
 
-class _SearchWorker(QThread):
-    """Runs hybrid search on a background thread."""
-
-    finished = Signal(list)
-    error = Signal(str)
-
-    def __init__(self, service, query: str):
-        super().__init__()
-        self._service = service
-        self._query = query
-
-    def run(self):
-        try:
-            results = self._service.search(self._query)
-            self.finished.emit(results)
-        except Exception as exc:
-            self.error.emit(str(exc))
+def _assets_dir() -> Path:
+    return Path(__file__).resolve().parent.parent.parent.parent / "assets"
 
 
-# ---------------------------------------------------------------------------
-# Stylesheet
-# ---------------------------------------------------------------------------
-
-_STYLESHEET = """
-QMainWindow {
-    background-color: #1e1e2e;
-}
-
-QLabel {
-    color: #cdd6f4;
-}
-
-QLabel#status_label {
-    color: #a6adc8;
-    padding: 4px 0px;
-}
-
-QLabel#folder_label {
-    color: #bac2de;
-    padding: 2px 4px;
-    background-color: #313244;
-    border: 1px solid #45475a;
-    border-radius: 4px;
-    min-height: 24px;
-}
-
-QPushButton {
-    background-color: #45475a;
-    color: #cdd6f4;
-    border: 1px solid #585b70;
-    border-radius: 6px;
-    padding: 8px 18px;
-    font-weight: 500;
-}
-
-QPushButton:hover {
-    background-color: #585b70;
-    border-color: #6c7086;
-}
-
-QPushButton:pressed {
-    background-color: #313244;
-}
-
-QPushButton:disabled {
-    background-color: #313244;
-    color: #6c7086;
-    border-color: #45475a;
-}
-
-QPushButton#index_button {
-    background-color: #89b4fa;
-    color: #1e1e2e;
-    border-color: #74c7ec;
-    font-weight: 600;
-}
-
-QPushButton#index_button:hover {
-    background-color: #74c7ec;
-}
-
-QPushButton#index_button:pressed {
-    background-color: #89dceb;
-}
-
-QPushButton#index_button:disabled {
-    background-color: #45475a;
-    color: #6c7086;
-    border-color: #45475a;
-}
-
-QPushButton#search_button {
-    background-color: #a6e3a1;
-    color: #1e1e2e;
-    border-color: #94e2d5;
-    font-weight: 600;
-}
-
-QPushButton#search_button:hover {
-    background-color: #94e2d5;
-}
-
-QPushButton#search_button:pressed {
-    background-color: #89dceb;
-}
-
-QPushButton#search_button:disabled {
-    background-color: #45475a;
-    color: #6c7086;
-    border-color: #45475a;
-}
-
-QLineEdit {
-    background-color: #313244;
-    color: #cdd6f4;
-    border: 1px solid #45475a;
-    border-radius: 6px;
-    padding: 8px 12px;
-    selection-background-color: #585b70;
-}
-
-QLineEdit:focus {
-    border-color: #89b4fa;
-}
-
-QTableWidget {
-    background-color: #181825;
-    color: #cdd6f4;
-    border: 1px solid #313244;
-    border-radius: 6px;
-    gridline-color: #313244;
-    selection-background-color: #45475a;
-    selection-color: #cdd6f4;
-}
-
-QTableWidget::item {
-    padding: 6px 10px;
-}
-
-QHeaderView::section {
-    background-color: #313244;
-    color: #cdd6f4;
-    border: none;
-    border-bottom: 2px solid #45475a;
-    padding: 8px 10px;
-    font-weight: 600;
-}
-
-QScrollBar:vertical {
-    background: #181825;
-    width: 10px;
-    border-radius: 5px;
-}
-
-QScrollBar::handle:vertical {
-    background: #45475a;
-    border-radius: 5px;
-    min-height: 20px;
-}
-
-QScrollBar::handle:vertical:hover {
-    background: #585b70;
-}
-
-QScrollBar::add-line:vertical,
-QScrollBar::sub-line:vertical {
-    height: 0px;
-}
-"""
+def _icon_path() -> str:
+    return str(_assets_dir() / "NeuraFind.ico")
 
 
-# ---------------------------------------------------------------------------
-# Main window
-# ---------------------------------------------------------------------------
+def _logo_path() -> str:
+    return str(_assets_dir() / "neurafind-logo.png")
+
+
+def _open_file(filepath: str) -> None:
+    """Open a file with the default system application."""
+    p = Path(filepath)
+    if not p.exists():
+        return
+    if sys.platform == "win32":
+        os.startfile(str(p))
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", str(p)])
+    else:
+        subprocess.Popen(["xdg-open", str(p)])
+
+
+def _open_folder(filepath: str) -> None:
+    """Open the containing folder and select the file."""
+    p = Path(filepath)
+    if sys.platform == "win32":
+        if p.exists():
+            subprocess.Popen(["explorer", "/select,", str(p)])
+        elif p.parent.exists():
+            subprocess.Popen(["explorer", str(p.parent)])
+    elif sys.platform == "darwin":
+        if p.exists():
+            subprocess.Popen(["open", "-R", str(p)])
+    else:
+        folder = str(p.parent) if p.parent.exists() else str(p)
+        subprocess.Popen(["xdg-open", folder])
+
 
 class MainWindow(QMainWindow):
-    """NeuraFind desktop interface."""
+    """IDE-style main window assembling all NeuraFind components."""
 
-    def __init__(
-        self,
-        indexing_service,
-        search_service,
-    ):
+    def __init__(self, indexing_service, search_service, model_name: str, on_model_changed=None):
         super().__init__()
         self._indexing_service = indexing_service
         self._search_service = search_service
+        self._model_name = model_name
+        self._on_model_changed_cb = on_model_changed
 
-        self._selected_folder: str | None = None
-        self._worker: QThread | None = None
+        self._selected_location: str | None = None
+        self._current_results: list[dict] = []
+        self._workers: list = []
 
         self._init_ui()
 
-    # ---- UI construction ---------------------------------------------------
+    # ── UI Construction ──────────────────────────────────────────
 
     def _init_ui(self) -> None:
-        self.setWindowTitle("NeuraFind")
-        self.setMinimumSize(860, 560)
-        self.resize(960, 640)
-        self.setStyleSheet(_STYLESHEET)
+        self.setWindowTitle("NeuraFind - Document Intelligence")
+        self.setMinimumSize(1100, 700)
+        self.resize(1300, 800)
 
-        body_font = QFont("Segoe UI", 10)
-        self.setFont(body_font)
+        ico = _icon_path()
+        if os.path.exists(ico):
+            self.setWindowIcon(QIcon(ico))
 
+        self._apply_theme()
+        self._build_menubar()
+        self._build_toolbar()
+        self._build_statusbar()
+        self._build_central()
+
+    def _apply_theme(self) -> None:
+        t = get_theme(state.settings.get("theme", "dark"))
+        sheet = build_stylesheet(t)
+        self.setStyleSheet(sheet)
+
+    def _build_menubar(self) -> None:
+        bar = self.menuBar()
+
+        # File
+        fm = bar.addMenu("&File")
+        a = fm.addAction("Select Location...")
+        a.setShortcut("Ctrl+O")
+        a.triggered.connect(self._on_browse_folder)
+        fm.addSeparator()
+        a = fm.addAction("Exit")
+        a.setShortcut("Alt+F4")
+        a.triggered.connect(self.close)
+
+        # Edit
+        em = bar.addMenu("&Edit")
+        a = em.addAction("Quick Search...")
+        a.setShortcut("Ctrl+K")
+        a.triggered.connect(self._open_quick_search)
+
+        # View
+        vm = bar.addMenu("&View")
+        a = vm.addAction("Toggle Explorer")
+        a.setShortcut("Ctrl+B")
+        a.triggered.connect(self._toggle_explorer)
+        a = vm.addAction("Toggle Preview")
+        a.setShortcut("Ctrl+J")
+        a.triggered.connect(self._toggle_preview)
+
+        # Tools
+        tm = bar.addMenu("&Tools")
+        a = tm.addAction("Index Current Location")
+        a.setShortcut("Ctrl+I")
+        a.triggered.connect(self._on_index)
+        a = tm.addAction("Focus Search")
+        a.setShortcut("Ctrl+F")
+        a.triggered.connect(self._focus_search)
+        tm.addSeparator()
+        a = tm.addAction("Indexing Manager...")
+        a.triggered.connect(self._open_indexing)
+        a = tm.addAction("Settings...")
+        a.setShortcut("Ctrl+,")
+        a.triggered.connect(self._open_settings)
+
+        # Help
+        hm = bar.addMenu("&Help")
+        a = hm.addAction("About NeuraFind")
+        a.setShortcut("F1")
+        a.triggered.connect(self._open_about)
+
+    def _build_toolbar(self) -> None:
+        tb = self.addToolBar("Main")
+        tb.setMovable(False)
+        tb.setFloatable(False)
+        tb.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+
+        # Brand
+        brand = QWidget()
+        bl = QHBoxLayout(brand)
+        bl.setContentsMargins(8, 0, 14, 0)
+        bl.setSpacing(6)
+
+        logo = _logo_path()
+        if os.path.exists(logo):
+            logo_lbl = QLabel()
+            pm = QPixmap(logo).scaled(
+                18, 18,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            logo_lbl.setPixmap(pm)
+            bl.addWidget(logo_lbl)
+
+        name_lbl = QLabel("NeuraFind")
+        name_lbl.setObjectName("section_title")
+        bl.addWidget(name_lbl)
+
+        tb.addWidget(brand)
+        tb.addSeparator()
+
+        tb.addAction("Select Location", self._on_browse_folder)
+        tb.addAction("Index", self._on_index)
+        tb.addAction("Search", self._focus_search)
+        tb.addSeparator()
+        tb.addAction("Settings", self._open_settings)
+        tb.addAction("About", self._open_about)
+
+    def _build_statusbar(self) -> None:
+        self._sb = QStatusBar()
+        self.setStatusBar(self._sb)
+
+        self._prog = QProgressBar()
+        self._prog.setFixedWidth(160)
+        self._prog.setRange(0, 0)
+        self._prog.setVisible(False)
+        self._sb.addPermanentWidget(self._prog)
+
+        self._sb.showMessage("Ready")
+
+    def _build_central(self) -> None:
         central = QWidget()
         self.setCentralWidget(central)
+        lay = QVBoxLayout(central)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
 
-        root_layout = QVBoxLayout(central)
-        root_layout.setContentsMargins(24, 24, 24, 24)
-        root_layout.setSpacing(16)
+        # Horizontal splitter: explorer | workspace+preview
+        self._h_split = QSplitter(Qt.Orientation.Horizontal)
 
-        # -- Title --
-        title_label = QLabel("NeuraFind")
-        title_label.setFont(QFont("Segoe UI", 20, QFont.Weight.Bold))
-        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        root_layout.addWidget(title_label)
+        # Left: File Explorer
+        self._explorer = FileExplorer()
+        self._explorer.location_selected.connect(self._on_location_selected)
+        self._h_split.addWidget(self._explorer)
 
-        # -- Folder row --
-        folder_row = QHBoxLayout()
-        folder_row.setSpacing(10)
+        # Right: Vertical splitter (workspace on top, preview on bottom)
+        self._v_split = QSplitter(Qt.Orientation.Vertical)
 
-        self._folder_button = QPushButton("Select Folder")
-        self._folder_button.setFixedWidth(130)
-        self._folder_button.clicked.connect(self._on_select_folder)
-        folder_row.addWidget(self._folder_button)
+        # Workspace
+        self._workspace = Workspace()
+        self._workspace.search_requested.connect(self._on_search)
+        self._workspace.index_requested.connect(self._on_index)
+        self._workspace.action_open_file.connect(self._handle_open_file)
+        self._workspace.action_open_folder.connect(self._handle_open_folder)
+        self._workspace.action_copy_path.connect(self._handle_copy_path)
+        self._workspace.action_preview.connect(self._handle_preview)
+        self._v_split.addWidget(self._workspace)
 
-        self._folder_label = QLabel("No folder selected")
-        self._folder_label.setObjectName("folder_label")
-        self._folder_label.setMinimumHeight(34)
-        folder_row.addWidget(self._folder_label, stretch=1)
+        # Preview
+        self._preview = PreviewPanel()
+        self._v_split.addWidget(self._preview)
 
-        self._index_button = QPushButton("Index")
-        self._index_button.setObjectName("index_button")
-        self._index_button.setFixedWidth(100)
-        self._index_button.setEnabled(False)
-        self._index_button.clicked.connect(self._on_index)
-        folder_row.addWidget(self._index_button)
+        self._v_split.setSizes([550, 200])
+        self._h_split.addWidget(self._v_split)
+        self._h_split.setSizes([250, 1050])
 
-        root_layout.addLayout(folder_row)
+        lay.addWidget(self._h_split)
 
-        # -- Search row --
-        search_row = QHBoxLayout()
-        search_row.setSpacing(10)
+    # ── Slots ────────────────────────────────────────────────────
 
-        self._search_input = QLineEdit()
-        self._search_input.setPlaceholderText("Enter search query…")
-        self._search_input.returnPressed.connect(self._on_search)
-        search_row.addWidget(self._search_input, stretch=1)
+    @Slot(str)
+    def _on_location_selected(self, path: str) -> None:
+        self._selected_location = path
+        self._workspace.set_location(path)
+        self._sb.showMessage(f"Location: {path}")
 
-        self._search_button = QPushButton("Search")
-        self._search_button.setObjectName("search_button")
-        self._search_button.setFixedWidth(100)
-        self._search_button.clicked.connect(self._on_search)
-        search_row.addWidget(self._search_button)
-
-        root_layout.addLayout(search_row)
-
-        # -- Results table --
-        self._table = QTableWidget()
-        self._table.setColumnCount(3)
-        self._table.setHorizontalHeaderLabels(["File Path", "Score", "Source"])
-        self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self._table.setAlternatingRowColors(True)
-        self._table.verticalHeader().setVisible(False)
-
-        header = self._table.horizontalHeader()
-        header.setStretchLastSection(False)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-
-        root_layout.addWidget(self._table, stretch=1)
-
-        # -- Status bar --
-        self._status_label = QLabel("Ready.")
-        self._status_label.setObjectName("status_label")
-        root_layout.addWidget(self._status_label)
-
-    # ---- Slots -------------------------------------------------------------
-
-    def _on_select_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+    def _on_browse_folder(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, "Select Location")
         if folder:
-            self._selected_folder = folder
-            self._folder_label.setText(folder)
-            self._index_button.setEnabled(True)
-            self._status_label.setText("Folder selected. Click Index to begin.")
+            self._on_location_selected(folder)
 
-    def _on_index(self) -> None:
-        if not self._selected_folder:
-            return
+    def _focus_search(self) -> None:
+        self._workspace.focus_search()
 
-        self._set_busy(True)
-        self._status_label.setText("Indexing… please wait.")
+    def _toggle_explorer(self) -> None:
+        self._explorer.setVisible(not self._explorer.isVisible())
 
-        worker = _IndexWorker(self._indexing_service, self._selected_folder)
-        worker.finished.connect(self._on_index_finished)
-        worker.error.connect(self._on_worker_error)
-        worker.finished.connect(worker.deleteLater)
-        worker.error.connect(worker.deleteLater)
-        self._worker = worker
-        worker.start()
+    def _toggle_preview(self) -> None:
+        self._preview.setVisible(not self._preview.isVisible())
 
-    def _on_index_finished(self, count: int) -> None:
-        self._set_busy(False)
-        self._status_label.setText(f"Indexing complete — {count} document(s) indexed.")
+    def _open_quick_search(self) -> None:
+        dlg = QuickSearchDialog(self)
+        dlg.setStyleSheet(self.styleSheet())
+        dlg.search_requested.connect(self._on_search)
+        dlg.exec()
 
-    def _on_search(self) -> None:
-        query = self._search_input.text().strip()
-        if not query:
-            return
+    def _open_settings(self) -> None:
+        dlg = SettingsDialog(self._model_name, self)
+        dlg.setStyleSheet(self.styleSheet())
+        dlg.settings_changed.connect(self._on_settings_changed)
+        dlg.model_changed.connect(self._on_model_changed)
+        dlg.exec()
 
-        self._set_busy(True)
-        self._status_label.setText("Searching…")
+    def _on_settings_changed(self) -> None:
+        self._apply_theme()
 
-        worker = _SearchWorker(self._search_service, query)
-        worker.finished.connect(self._on_search_finished)
-        worker.error.connect(self._on_worker_error)
-        worker.finished.connect(worker.deleteLater)
-        worker.error.connect(worker.deleteLater)
-        self._worker = worker
-        worker.start()
+    @Slot(str)
+    def _on_model_changed(self, name: str) -> None:
+        self._model_name = name
+        if self._on_model_changed_cb:
+            self._on_model_changed_cb(name)
+        self._sb.showMessage(f"Model changed to: {name}")
+        self._show_toast(f"Model activated: {name}", "success")
 
-    def _on_search_finished(self, results: list) -> None:
-        self._set_busy(False)
-        self._populate_table(results)
-        self._status_label.setText(f"Search complete — {len(results)} result(s).")
+    def _open_indexing(self) -> None:
+        dlg = IndexingManagerDialog(self)
+        dlg.setStyleSheet(self.styleSheet())
+        dlg.exec()
 
-    def _on_worker_error(self, message: str) -> None:
-        self._set_busy(False)
-        self._status_label.setText(f"Error: {message}")
+    def _open_about(self) -> None:
+        dlg = AboutDialog(self)
+        dlg.setStyleSheet(self.styleSheet())
+        dlg.exec()
 
-    # ---- Helpers -----------------------------------------------------------
+    # ── Toasts ───────────────────────────────────────────────────
+
+    def _show_toast(self, msg: str, type_: str = "info") -> None:
+        toast = ToastNotification(self, msg, type_)
+        toast.show_toast()
+
+    # ── Worker: Index ────────────────────────────────────────────
 
     def _set_busy(self, busy: bool) -> None:
-        self._folder_button.setEnabled(not busy)
-        self._index_button.setEnabled(not busy and self._selected_folder is not None)
-        self._search_button.setEnabled(not busy)
-        self._search_input.setEnabled(not busy)
+        self._prog.setVisible(busy)
+        self._workspace.set_busy(busy)
 
-    def _populate_table(self, results: list[dict]) -> None:
-        self._table.setRowCount(0)
-        self._table.setRowCount(len(results))
+    def _on_index(self) -> None:
+        if not self._selected_location:
+            self._sb.showMessage("Please select a folder first.")
+            self._show_toast("Select a folder in the Explorer first.", "warning")
+            return
 
-        for row, result in enumerate(results):
-            path_item = QTableWidgetItem(str(result.get("path", "")))
-            score_item = QTableWidgetItem(f'{result.get("score", 0):.4f}')
-            source_item = QTableWidgetItem(str(result.get("source", "")))
+        self._set_busy(True)
+        self._sb.showMessage(f"Indexing {self._selected_location}...")
 
-            score_item.setTextAlignment(
-                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-            )
-            source_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+        w = IndexWorker(self._indexing_service, self._selected_location)
+        w.finished.connect(self._on_index_done)
+        w.error.connect(self._on_index_err)
+        w.finished.connect(w.deleteLater)
+        w.error.connect(w.deleteLater)
+        self._workers.append(w)
+        w.start()
 
-            self._table.setItem(row, 0, path_item)
-            self._table.setItem(row, 1, score_item)
-            self._table.setItem(row, 2, source_item)
+    @Slot(int)
+    def _on_index_done(self, count: int) -> None:
+        self._set_busy(False)
+        self._sb.showMessage(f"Indexed {count} documents successfully.")
+        self._show_toast(f"Indexing complete: {count} documents.", "success")
+
+    @Slot(str)
+    def _on_index_err(self, err: str) -> None:
+        self._set_busy(False)
+        self._sb.showMessage(f"Indexing error: {err}")
+        self._show_toast(f"Indexing failed: {err}", "error")
+
+    # ── Worker: Search ───────────────────────────────────────────
+
+    @Slot(str)
+    def _on_search(self, query: str) -> None:
+        self._set_busy(True)
+        self._sb.showMessage(f"Searching: {query}")
+
+        limit = state.settings.get("result_limit", 50)
+        # Pass the selected location so the worker filters the results properly
+        w = SearchWorker(self._search_service, query, top_k=limit, location_filter=self._selected_location)
+        w.finished.connect(self._on_search_done)
+        w.error.connect(self._on_search_err)
+        w.finished.connect(w.deleteLater)
+        w.error.connect(w.deleteLater)
+        self._workers.append(w)
+        w.start()
+
+    @Slot(list)
+    def _on_search_done(self, results: list) -> None:
+        self._set_busy(False)
+        self._current_results = results
+        self._workspace.set_results(results)
+        n = len(results)
+        self._sb.showMessage(f"Search complete: {n} result(s)")
+        self._show_toast(f"Found {n} results.", "success")
+
+    @Slot(str)
+    def _on_search_err(self, err: str) -> None:
+        self._set_busy(False)
+        self._sb.showMessage(f"Search error: {err}")
+        self._show_toast(f"Search failed: {err}", "error")
+
+    # ── Result Actions ───────────────────────────────────────────
+
+    def _handle_open_file(self, path: str) -> None:
+        _open_file(path)
+
+    def _handle_open_folder(self, path: str) -> None:
+        _open_folder(path)
+
+    def _handle_copy_path(self, path: str) -> None:
+        QApplication.clipboard().setText(path)
+        self._sb.showMessage("Path copied.")
+        self._show_toast("Path copied to clipboard.", "info")
+
+    def _handle_preview(self, result: dict) -> None:
+        self._preview.show_result(result)
+        if not self._preview.isVisible():
+            self._preview.setVisible(True)
