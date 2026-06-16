@@ -3,3 +3,4 @@ python-docx
 openpyxl
 python-pptx
 rapidfuzz
+sentence-transformers
