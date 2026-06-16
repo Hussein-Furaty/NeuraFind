@@ -3,17 +3,19 @@ from math import sqrt
 
 from src.neurafind.embeddings.embedding_service import EmbeddingService
 from src.neurafind.storage.document_store import DocumentStore
+from src.neurafind.storage.vector_store import VectorStore
 
 
 class SemanticSearchService:
-    """Provides semantic search using text embeddings."""
+    """Provides semantic search using stored document embeddings."""
 
     def __init__(
         self,
         database_path: str | Path,
         embedding_service: EmbeddingService,
     ):
-        self.store = DocumentStore(database_path)
+        self.document_store = DocumentStore(database_path)
+        self.vector_store = VectorStore(database_path)
         self.embedding_service = embedding_service
 
     def _cosine_similarity(
@@ -36,15 +38,13 @@ class SemanticSearchService:
 
         results = []
 
-        for document in self.store.get_all_documents():
-            document_embedding = self.embedding_service.embed_text(
-                document["content"][:5000]
-            )
+        for document in self.document_store.get_all_documents():
+            document_embedding = self.vector_store.get_embedding(document["path"])
 
-            score = self._cosine_similarity(
-                query_embedding,
-                document_embedding,
-            )
+            if document_embedding is None:
+                continue
+
+            score = self._cosine_similarity(query_embedding, document_embedding)
 
             result = dict(document)
             result["score"] = score
