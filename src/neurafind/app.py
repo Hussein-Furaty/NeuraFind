@@ -25,7 +25,6 @@ class _App:
         self._indexing_service: EmbeddingIndexingService | None = None
         self._search_service: HybridSearchService | None = None
 
-        self._init_services()
 
     def _init_services(self) -> None:
         """Initialise backend services with the current model.
@@ -63,29 +62,54 @@ class _App:
             self._window._indexing_service = self._indexing_service
 
     def run(self) -> int:
+        from PySide6.QtCore import QTimer
         app = QApplication(sys.argv)
-        
-        from src.neurafind.ui.splash import show_splash
-        splash = show_splash()
-        
-        # Give splash a moment to render while we do final setup
-        app.processEvents()
 
-        self._window = MainWindow(
-            indexing_service=self._indexing_service,
-            search_service=self._search_service,
-            model_name=self._model_name,
-            on_model_changed=self.on_model_changed,
-        )
+        from src.neurafind.ui.splash import show_splash
+        self.splash = show_splash()
         
-        # Simulate loading if it was too fast so user actually sees the premium splash
-        import time
-        time.sleep(1.0)
-        
-        self._window.show()
-        splash.finish(self._window)
+        self._services_ready = False
+        self._time_elapsed = False
+
+        self._worker = _InitWorker(self)
+        self._worker.finished.connect(self._mark_services_ready)
+        self._worker.start()
+
+        QTimer.singleShot(2500, self._mark_time_elapsed)
 
         return app.exec()
+
+    def _mark_services_ready(self):
+        self._services_ready = True
+        self._check_ready()
+
+    def _mark_time_elapsed(self):
+        self._time_elapsed = True
+        self._check_ready()
+
+    def _check_ready(self):
+        if self._services_ready and self._time_elapsed:
+            self._window = MainWindow(
+                indexing_service=self._indexing_service,
+                search_service=self._search_service,
+                model_name=self._model_name,
+                on_model_changed=self.on_model_changed,
+            )
+            self._window.show()
+            self.splash.finish(self._window)
+
+
+from PySide6.QtCore import QThread, Signal
+
+class _InitWorker(QThread):
+    finished = Signal()
+    def __init__(self, app_controller):
+        super().__init__()
+        self.app_controller = app_controller
+
+    def run(self):
+        self.app_controller._init_services()
+        self.finished.emit()
 
 
 class _PlaceholderModel:
