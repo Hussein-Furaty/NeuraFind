@@ -33,7 +33,17 @@ class SemanticSearchService:
 
         return dot_product / (norm_a * norm_b)
 
-    def search(self, query: str) -> list[dict]:
+    def search(
+        self,
+        query: str,
+        top_k: int = 10,
+        min_score: float = 0.30,
+    ) -> list[dict]:
+        query = query.strip()
+
+        if not query:
+            return []
+
         query_embedding = self.embedding_service.embed_text(query)
 
         results = []
@@ -46,13 +56,18 @@ class SemanticSearchService:
 
             score = self._cosine_similarity(query_embedding, document_embedding)
 
+            if score < min_score:
+                continue
+
             result = dict(document)
             result["score"] = score
 
             results.append(result)
 
-        return sorted(
+        ranked_results = sorted(
             results,
             key=lambda item: item["score"],
             reverse=True,
         )
+
+        return ranked_results[:top_k]
