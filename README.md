@@ -85,11 +85,18 @@ graph TD
     ```
 
 ### Production Build (Executable)
-To generate a standalone Windows installer utilizing PyInstaller and Inno Setup:
-```cmd
-scripts\build_all.bat
-```
-*Note: Requires Inno Setup 6 to be installed on the host machine.*
+To generate a standalone Windows installer utilizing PyInstaller and the Inno Setup compiler:
+
+1. **Install Inno Setup 6:** 
+   Download the compiler from the [Official JRSoftware Website](https://jrsoftware.org/isdl.php).
+   *Tip: Install it in the default directory (`C:\Program Files (x86)\Inno Setup 6`) so the automated build script can locate the `ISCC.exe` compiler automatically.*
+
+2. **Execute the Build Pipeline:**
+   Run the batch script which automates both PyInstaller packaging and Inno Setup compilation:
+   ```cmd
+   scripts\build_all.bat
+   ```
+   *Upon successful execution, the final installer (`NeuraFind_Setup_v1.0.0.exe`) will be generated in the `dist/` directory, and intermediate portable files will be automatically cleaned.*
 
 ## Technical Acknowledgements & Dependencies
 
