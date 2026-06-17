@@ -49,3 +49,6 @@ downloads/
 
 # Local settings
 *.ini
+
+# Temporary experiments
+scratch/
