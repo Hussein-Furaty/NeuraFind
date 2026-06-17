@@ -39,3 +39,13 @@ htmlcov/
 *.db
 *.sqlite
 *.sqlite3
+
+# NeuraFind Models
+models/
+
+# User data
+data/
+downloads/
+
+# Local settings
+*.ini

@@ -2,12 +2,11 @@
 
 import sys
 
+from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtWidgets import QApplication
 
 from src.neurafind.embeddings.embedding_service import EmbeddingService
-from src.neurafind.embeddings.models.sentence_transformer_model import (
-    SentenceTransformerModel,
-)
+from src.neurafind.embeddings.models.onnx_embedding_model import ONNXEmbeddingModel
 from src.neurafind.search.hybrid_search_service import HybridSearchService
 from src.neurafind.services.embedding_indexing_service import EmbeddingIndexingService
 from src.neurafind.services.model_service import DEFAULT_MODEL, is_model_installed
@@ -24,17 +23,12 @@ class _App:
         self._embedding_service: EmbeddingService | None = None
         self._indexing_service: EmbeddingIndexingService | None = None
         self._search_service: HybridSearchService | None = None
-
+        self._window: MainWindow | None = None
 
     def _init_services(self) -> None:
-        """Initialise backend services with the current model.
-
-        If the model is not installed the services are created with a
-        placeholder that will fail gracefully at search/index time rather
-        than crashing at startup.
-        """
+        """Initialise backend services with the current ONNX model."""
         if is_model_installed(self._model_name):
-            model = SentenceTransformerModel(self._model_name)
+            model = ONNXEmbeddingModel(self._model_name)
         else:
             model = _PlaceholderModel(self._model_name)
 
@@ -55,19 +49,17 @@ class _App:
         self._model_name = model_name
         self._init_services()
 
-        # Patch the running window references so the next action uses the
-        # new services.
         if self._window is not None:
             self._window._search_service = self._search_service
             self._window._indexing_service = self._indexing_service
 
     def run(self) -> int:
-        from PySide6.QtCore import QTimer
         app = QApplication(sys.argv)
 
         from src.neurafind.ui.splash import show_splash
+
         self.splash = show_splash()
-        
+
         self._services_ready = False
         self._time_elapsed = False
 
@@ -99,10 +91,9 @@ class _App:
             self.splash.finish(self._window)
 
 
-from PySide6.QtCore import QThread, Signal
-
 class _InitWorker(QThread):
     finished = Signal()
+
     def __init__(self, app_controller):
         super().__init__()
         self.app_controller = app_controller
@@ -113,10 +104,7 @@ class _InitWorker(QThread):
 
 
 class _PlaceholderModel:
-    """Stand-in embedding model used when the real model is not yet downloaded.
-
-    Raises a clear error instead of crashing at startup.
-    """
+    """Stand-in embedding model used when the real model is not available."""
 
     def __init__(self, model_name: str):
         self._model_name = model_name
@@ -124,7 +112,7 @@ class _PlaceholderModel:
     def embed(self, text: str) -> list[float]:
         raise RuntimeError(
             f"Embedding model '{self._model_name}' is not installed. "
-            f"Please download it from the Settings page first."
+            f"Please place the ONNX model files in models/minilm-onnx."
         )
 
 
