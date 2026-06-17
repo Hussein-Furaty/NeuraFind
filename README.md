@@ -11,16 +11,16 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
   [![Status: Active](https://img.shields.io/badge/Status-Active_Development-success.svg?style=flat-square)]()
   [![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-blue.svg?style=flat-square)]()
-  
-  <!-- Technology Stack Badges -->
   [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
   [![Platform: Windows](https://img.shields.io/badge/Platform-Windows_10%20%7C%2011-0078D6.svg?style=flat-square&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
   [![Architecture: x64](https://img.shields.io/badge/Architecture-x64-lightgrey.svg?style=flat-square)]()
-  
-  <!-- Core Frameworks Badges -->
   [![Framework: PySide6](https://img.shields.io/badge/UI_Framework-PySide6-41CD52.svg?style=flat-square&logo=qt&logoColor=white)](https://wiki.qt.io/Qt_for_Python)
   [![AI: ONNX Runtime](https://img.shields.io/badge/AI_Engine-ONNX_Runtime-005CED.svg?style=flat-square&logo=onnx&logoColor=white)](https://onnxruntime.ai/)
   [![Database: SQLite3](https://img.shields.io/badge/Storage-SQLite3-003B57.svg?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+
+  <br>
+
+  ### [📥Download Latest Windows Installer](https://github.com/Hussein-Furaty/NeuraFind/releases/latest)
 
 </div>
 
