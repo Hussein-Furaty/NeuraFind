@@ -5,7 +5,7 @@ a = Analysis(
     ['src\\neurafind\\app.py'],
     pathex=['.'],
     binaries=[],
-    datas=[('assets', 'assets')],
+    datas=[('assets', 'assets'), ('models\\minilm-onnx', 'models\\minilm-onnx')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

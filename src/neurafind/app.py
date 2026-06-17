@@ -9,7 +9,7 @@ from src.neurafind.embeddings.embedding_service import EmbeddingService
 from src.neurafind.embeddings.models.onnx_embedding_model import ONNXEmbeddingModel
 from src.neurafind.search.hybrid_search_service import HybridSearchService
 from src.neurafind.services.embedding_indexing_service import EmbeddingIndexingService
-from src.neurafind.services.model_service import DEFAULT_MODEL, is_model_installed
+from src.neurafind.services.model_service import DEFAULT_MODEL, get_model_path, is_model_installed
 from src.neurafind.ui.main_window import MainWindow
 
 DATABASE_PATH = "neurafind.db"
@@ -28,7 +28,8 @@ class _App:
     def _init_services(self) -> None:
         """Initialise backend services with the current ONNX model."""
         if is_model_installed(self._model_name):
-            model = ONNXEmbeddingModel(self._model_name)
+            model_path = get_model_path(self._model_name)
+            model = ONNXEmbeddingModel(model_path)
         else:
             model = _PlaceholderModel(self._model_name)
 

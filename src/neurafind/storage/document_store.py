@@ -39,15 +39,28 @@ class DocumentStore:
                 ],
             )
 
-    def get_all_documents(self) -> list[dict[str, str]]:
+    def get_all_documents(self, location_filter: str = None) -> list[dict[str, str]]:
         with self._connect() as connection:
-            cursor = connection.execute(
-                """
-                SELECT path, file_type, content
-                FROM documents
-                ORDER BY path
-                """
-            )
+            if location_filter:
+                import os
+                filter_path = os.path.normpath(location_filter).lower()
+                cursor = connection.execute(
+                    """
+                    SELECT path, file_type, content
+                    FROM documents
+                    WHERE LOWER(path) LIKE ?
+                    ORDER BY path
+                    """,
+                    (f"{filter_path}%",),
+                )
+            else:
+                cursor = connection.execute(
+                    """
+                    SELECT path, file_type, content
+                    FROM documents
+                    ORDER BY path
+                    """
+                )
 
             return [
                 {

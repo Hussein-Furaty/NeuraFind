@@ -21,10 +21,10 @@ class HybridSearchService:
             embedding_service=embedding_service,
         )
 
-    def search(self, query: str, top_k: int = 10) -> list[dict]:
+    def search(self, query: str, top_k: int = 10, location_filter: str = None) -> list[dict]:
         combined_results: dict[str, dict] = {}
 
-        for result in self.exact_search.search(query):
+        for result in self.exact_search.search(query, location_filter=location_filter):
             path = result["path"]
             combined_results[path] = {
                 **result,
@@ -32,7 +32,7 @@ class HybridSearchService:
                 "source": "exact",
             }
 
-        for result in self.fuzzy_search.search(query):
+        for result in self.fuzzy_search.search(query, location_filter=location_filter):
             path = result["path"]
             score = float(result["score"]) / 100
 
@@ -43,7 +43,7 @@ class HybridSearchService:
                     "source": "fuzzy",
                 }
 
-        for result in self.semantic_search.search(query, top_k=top_k):
+        for result in self.semantic_search.search(query, top_k=top_k, location_filter=location_filter):
             path = result["path"]
             score = float(result["score"])
 

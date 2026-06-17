@@ -4,6 +4,7 @@ from math import sqrt
 from src.neurafind.embeddings.embedding_service import EmbeddingService
 from src.neurafind.storage.document_store import DocumentStore
 from src.neurafind.storage.vector_store import VectorStore
+from src.neurafind.config import MIN_SIMILARITY_SCORE
 
 
 class SemanticSearchService:
@@ -37,7 +38,9 @@ class SemanticSearchService:
         self,
         query: str,
         top_k: int = 10,
-        min_score: float = 0.30,
+        min_score: float | None = None,
+        adaptive: bool = True,
+        location_filter: str = None,
     ) -> list[dict]:
         query = query.strip()
 
@@ -46,9 +49,13 @@ class SemanticSearchService:
 
         query_embedding = self.embedding_service.embed_text(query)
 
+        # Use configured default if no explicit min_score provided
+        if min_score is None:
+            min_score = MIN_SIMILARITY_SCORE
+
         results = []
 
-        for document in self.document_store.get_all_documents():
+        for document in self.document_store.get_all_documents(location_filter=location_filter):
             document_embedding = self.vector_store.get_embedding(document["path"])
 
             if document_embedding is None:
@@ -56,13 +63,16 @@ class SemanticSearchService:
 
             score = self._cosine_similarity(query_embedding, document_embedding)
 
-            if score < min_score:
-                continue
+            results.append({**document, "score": score})
 
-            result = dict(document)
-            result["score"] = score
-
-            results.append(result)
+        # Adaptive threshold: boost min_score based on top result similarity
+        if adaptive and results:
+            top_score = max(r["score"] for r in results)
+            # Use 70% of the best score as dynamic floor (but never lower than configured default)
+            adaptive_min = max(min_score, top_score * 0.7)
+            results = [r for r in results if r["score"] >= adaptive_min]
+        else:
+            results = [r for r in results if r["score"] >= min_score]
 
         ranked_results = sorted(
             results,

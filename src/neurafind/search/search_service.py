@@ -9,7 +9,7 @@ class SearchService:
     def __init__(self, database_path: str | Path):
         self.store = DocumentStore(database_path)
 
-    def search(self, query: str) -> list[dict[str, str]]:
+    def search(self, query: str, location_filter: str = None) -> list[dict[str, str]]:
         query = query.strip().lower()
 
         if not query:
@@ -17,7 +17,7 @@ class SearchService:
 
         results = []
 
-        for document in self.store.get_all_documents():
+        for document in self.store.get_all_documents(location_filter=location_filter):
             content = document["content"].lower()
 
             if query in content:

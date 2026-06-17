@@ -12,7 +12,7 @@ class FuzzySearchService:
         self.store = DocumentStore(database_path)
         self.threshold = threshold
 
-    def search(self, query: str) -> list[dict[str, str]]:
+    def search(self, query: str, location_filter: str = None) -> list[dict[str, str]]:
         query = query.strip().lower()
 
         if not query:
@@ -20,7 +20,7 @@ class FuzzySearchService:
 
         results = []
 
-        for document in self.store.get_all_documents():
+        for document in self.store.get_all_documents(location_filter=location_filter):
             content = document["content"].lower()
             score = fuzz.partial_ratio(query, content)
 

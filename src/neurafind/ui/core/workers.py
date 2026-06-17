@@ -31,20 +31,12 @@ class SearchWorker(QThread):
 
     def run(self):
         try:
-            # We fetch more results initially if we need to filter them
-            fetch_limit = self._top_k * 5 if self._location_filter else self._top_k
-            results = self._service.search(self._query, top_k=fetch_limit)
-            
-            if self._location_filter:
-                import os
-                filter_path = os.path.normpath(self._location_filter).lower()
-                filtered = []
-                for r in results:
-                    p = os.path.normpath(str(r.get("path", ""))).lower()
-                    if p.startswith(filter_path):
-                        filtered.append(r)
-                results = filtered[:self._top_k]
-                
+            results = self._service.search(
+                self._query, 
+                top_k=self._top_k, 
+                location_filter=self._location_filter
+            )
+
             self.finished.emit(results)
         except Exception as exc:
             self.error.emit(str(exc))

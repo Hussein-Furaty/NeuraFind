@@ -1,0 +1,75 @@
+End User License Agreement (EULA) for NeuraFind
+
+Please read this agreement carefully before installing or using the NeuraFind application ("the Application"). By installing or using the Application, you agree to be bound by the terms of this agreement.
+
+1. License Grant
+The Developer (Hussein Al-Furati) grants you a non-exclusive, non-transferable, limited license to install and use the Application on a Windows computer that you own or control, for personal, academic, or internal business purposes.
+
+2. Privacy and Local-First Operation
+- Complete Privacy: The Application operates entirely locally on your machine. Your files, text, search queries, and models are never sent to any external servers or third parties.
+- Data Indexing: Indexes and databases are stored locally on your hard drive. You are solely responsible for securing access to your device.
+
+3. Restrictions
+You may not:
+a. Reverse engineer, decompile, or attempt to extract the source code of the Application.
+b. Sell, rent, or redistribute the Application as a standalone commercial product without prior written permission from the Developer.
+c. Use the Application for any illegal activity or in violation of others' privacy.
+
+4. AI Models
+The Application relies on open-source AI models (e.g., Hugging Face / ONNX models). These models are downloaded locally and are subject to their respective original licenses. The Developer is not responsible for the outputs of the models or search accuracy.
+
+5. Disclaimer of Warranties
+This Application is provided "as is" without warranties of any kind, either express or implied. The Developer does not warrant that the Application will be error-free or that its operation will be uninterrupted.
+
+6. Limitation of Liability
+Under no circumstances shall the Developer be liable for any direct, indirect, incidental, or consequential damages (including, but not limited to, loss of data, profits, or business interruption) arising out of the use or inability to use this Application.
+
+7. Modifications to the Application
+The Developer reserves the right to modify, suspend, or discontinue the Application (or any part thereof) at any time with or without prior notice.
+
+8. Governing Law
+This agreement shall be governed by and construed in accordance with the applicable laws. In the event of any dispute, it shall be resolved amicably.
+
+By clicking "I Accept", or by installing or using the Application, you acknowledge that you have read and understood this agreement and agree to be bound by its terms.
+
+Developer: Hussein Al-Furati
+Email: hussein.a.habeeb.sec@gmail.com
+
+====================================================================
+
+اتفاقية ترخيص المستخدم النهائي (EULA) لتطبيق NeuraFind
+
+يرجى قراءة هذه الاتفاقية بعناية قبل تثبيت أو استخدام تطبيق NeuraFind ("التطبيق"). بتثبيتك أو استخدامك للتطبيق، فإنك توافق على الالتزام بشروط هذه الاتفاقية.
+
+1. منح الترخيص
+يمنحك المطور (Hussein Al-Furati) ترخيصاً غير حصري، وغير قابل للتحويل، ومحدوداً لتثبيت التطبيق واستخدامه على جهاز كمبيوتر يعمل بنظام ويندوز تملكه أو تتحكم فيه، وذلك للأغراض الشخصية أو الأكاديمية أو التجارية الداخلية.
+
+2. الخصوصية والعمل المحلي (Local-First)
+- الخصوصية التامة: يعمل التطبيق بالكامل محلياً على جهازك. لا يتم إرسال ملفاتك، أو نصوصك، أو استعلامات البحث، أو النماذج إلى أي خوادم خارجية أو أطراف ثالثة.
+- فهرسة البيانات: يتم تخزين الفهارس وقاعدة البيانات محلياً على القرص الصلب الخاص بك. أنت المسؤول الوحيد عن تأمين الوصول إلى جهازك.
+
+3. القيود
+لا يُسمح لك بما يلي:
+أ- الهندسة العكسية، أو تفكيك، أو محاولة استخراج الكود المصدري للتطبيق.
+ب- بيع، أو تأجير، أو إعادة توزيع التطبيق كمنتج تجاري مستقل دون إذن كتابي مسبق من المطور.
+ج- استخدام التطبيق في أي نشاط غير قانوني أو ينتهك خصوصية الآخرين.
+
+4. النماذج والذكاء الاصطناعي (AI Models)
+يعتمد التطبيق على نماذج ذكاء اصطناعي مفتوحة المصدر (مثل نماذج Hugging Face / ONNX). يتم تحميل هذه النماذج محلياً وتخضع لتراخيصها الأصلية. المطور غير مسؤول عن مخرجات النماذج أو دقة البحث.
+
+5. إخلاء المسؤولية عن الضمانات (Disclaimer of Warranties)
+يتم توفير هذا التطبيق "كما هو" دون أي ضمانات من أي نوع، سواء كانت صريحة أو ضمنية. لا يضمن المطور أن التطبيق سيكون خالياً من الأخطاء، أو أن تشغيله سيكون دون انقطاع.
+
+6. تحديد المسؤولية (Limitation of Liability)
+تحت أي ظرف من الظروف، لن يكون المطور مسؤولاً عن أي أضرار مباشرة، أو غير مباشرة، أو عرضية، أو تبعية (بما في ذلك، على سبيل المثال لا الحصر، فقدان البيانات، أو الأرباح، أو توقف العمل) تنشأ عن استخدام أو عدم القدرة على استخدام هذا التطبيق.
+
+7. التعديلات على التطبيق
+يحتفظ المطور بالحق في تعديل، أو تعليق، أو إيقاف التطبيق (أو أي جزء منه) في أي وقت مع أو بدون إشعار مسبق.
+
+8. القانون المطبق
+تخضع هذه الاتفاقية وتفسر وفقاً للقوانين المعمول بها. في حال وجود أي نزاع، يتم حله ودياً.
+
+بالنقر على "أوافق" (I Accept)، أو من خلال تثبيت التطبيق أو استخدامه، فإنك تقر بأنك قرأت هذه الاتفاقية وفهمتها وتوافق على الالتزام بشروطها.
+
+المطور: Hussein Al-Furati
+البريد الإلكتروني: hussein.a.habeeb.sec@gmail.com
