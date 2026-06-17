@@ -1,6 +1,8 @@
 """NeuraFind application entry point."""
 
+import os
 import sys
+from pathlib import Path
 
 from PySide6.QtCore import QThread, QTimer, Signal
 from PySide6.QtWidgets import QApplication
@@ -12,7 +14,13 @@ from src.neurafind.services.embedding_indexing_service import EmbeddingIndexingS
 from src.neurafind.services.model_service import DEFAULT_MODEL, get_model_path, is_model_installed
 from src.neurafind.ui.main_window import MainWindow
 
-DATABASE_PATH = "neurafind.db"
+def _get_db_path() -> str:
+    app_data = Path(os.getenv("LOCALAPPDATA", Path.home() / ".local" / "share"))
+    neura_dir = app_data / "NeuraFind"
+    neura_dir.mkdir(parents=True, exist_ok=True)
+    return str(neura_dir / "neurafind.db")
+
+DATABASE_PATH = _get_db_path()
 
 
 class _App:
